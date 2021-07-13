@@ -1,0 +1,36 @@
+<!doctype html>
+<html>
+<head>
+{% set album = data.album %}
+<title>{{ album.name }} for {{ user.name }}</title>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<script src="{{ url_for('static', filename = 'js/masonry.pkgd.min.js') }}"></script>
+<script src="{{ url_for('static', filename = 'js/imagesloaded.pkgd.min.js') }}"></script>
+<script src="{{ url_for('static', filename = 'js/jquery-3.5.1.min.js') }}"></script>
+<script src="{{ url_for('static', filename = 'js/jquery.swipebox.min.js') }}"></script>
+
+<link href="{{ url_for('album_css') }}" rel="stylesheet" type="text/css"/>
+<link href="{{ url_for('static', filename = 'css/swipebox.min.css') }}" rel="stylesheet" type="text/css"/>
+</head>
+<body>
+<div class="grid">
+{% for folder in data['folders'] %}
+<a class="grid-item folder" href="{{ url_for('album', album = folder.name) }}" title="{{ folder.name}}">{{ folder.name }}</a>
+{% endfor %}
+
+{% for photo in data['photos'] %}
+<a class="swipebox grid-item" style="{{ photo.style }}" href="{{ url_for('photo', album = album.name, photo = photo.file) }}"><img src="{{ album.name }}/thumbs/{{ photo.file }}" class="thumb"/></a>
+{% endfor %}
+</div>
+<script>
+var container = document.querySelector('.grid');
+var msnry;
+// initialize Masonry after all images have loaded
+ imagesLoaded( container, function() {
+  msnry = new Masonry(container, { "itemSelector": ".grid-item", "columnWidth": 10 });
+ });
+
+$( '.swipebox' ).swipebox();
+</script>
+</body>
+</html>

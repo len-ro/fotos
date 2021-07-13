@@ -1,0 +1,59 @@
+{
+    "paths": ["/phantom/poze/"],
+    "dbFile": "album.db",
+    "restrictTags": ["private", "family"],
+    "albumTagsFile": "tags",
+    "formats": ["JPG", "JPEG"],
+    "albumDir": "album",
+    "albumDataFile": "album.json",
+    "thumbDir": "thumbs",
+    "thumbSizeSmall": 240,
+    "thumbSizeLarge": 486,
+    "ratingLargeThumb": 2,
+    "imageSize": 2000,
+    "thumbOffset": 13,
+    "exif": {
+        "captionKeys": ["Exif.Image.ImageDescription", "Iptc.Application2.Caption"],
+        "ratingKeys": ["Xmp.xmp.Rating"],
+        "tagsKeys": ["Xmp.dc.subject", "Iptc.Application2.Keywords"],
+        "favoriteKeys": ["Xmp.fstop.favorite"],
+        "dateKeys": ["Exif.Photo.DateTimeOriginal"],
+        "keepKeys": ["Exif.Image.Artist", "Exif.Image.Copyright", "Iptc.Application2.Copyright", "Xmp.dc.creator"]
+    },
+    "logging": {
+        "version": 1,
+        "formatters": {
+            "retroAlbum": {
+                "format": "%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+                "datefmt": "%Y-%m-%d %H:%M:%S"
+            }
+        },
+        "handlers": {
+            "default": { 
+                "level": "INFO",
+                "formatter": "retroAlbum",
+                "class": "logging.StreamHandler"
+            },
+            "file": {
+                "class": "logging.handlers.RotatingFileHandler",
+                "formatter": "retroAlbum",
+                "filename": "retroAlbum.log",
+                "maxBytes": 1048576,
+                "backupCount": 10
+            }
+        },
+        "loggers": {
+            "": {
+                "handlers": ["file", "default"],
+                "level": "INFO",
+                "propagate": true
+            }
+        }
+    },
+    "googleOauth": {
+        "clientId": "xxx.apps.googleusercontent.com",
+        "clientSecret": "xxx",
+        "discoveryURL": "https://accounts.google.com/.well-known/openid-configuration"
+    },
+    "flaskSecret": "xxx"
+}
