@@ -1,2 +1,2 @@
-# horusPhotos
+# fotos
 private photo album
