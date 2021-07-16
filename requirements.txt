@@ -1,0 +1,8 @@
+wheel
+requests
+Flask
+oauthlib
+pyOpenSSL
+#on ubuntu 20.04 this also requires sudo apt install libexiv2-dev exiv2 libboost-python-dev
+py3exiv2
+pillow

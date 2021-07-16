@@ -23,7 +23,7 @@
     "logging": {
         "version": 1,
         "formatters": {
-            "retroAlbum": {
+            "fotos": {
                 "format": "%(asctime)s - %(name)s - %(levelname)s - %(message)s",
                 "datefmt": "%Y-%m-%d %H:%M:%S"
             }
@@ -31,13 +31,13 @@
         "handlers": {
             "default": { 
                 "level": "INFO",
-                "formatter": "retroAlbum",
+                "formatter": "fotos",
                 "class": "logging.StreamHandler"
             },
             "file": {
                 "class": "logging.handlers.RotatingFileHandler",
-                "formatter": "retroAlbum",
-                "filename": "retroAlbum.log",
+                "formatter": "fotos",
+                "filename": "fotos.log",
                 "maxBytes": 1048576,
                 "backupCount": 10
             }

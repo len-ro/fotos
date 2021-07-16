@@ -15,12 +15,11 @@ from werkzeug.exceptions import HTTPException
 scriptPath = os.path.dirname(os.path.abspath(__file__))
 config = json.load(open(os.path.join(scriptPath, 'config.json'), 'r'))
 logging.config.dictConfig(config['logging'])
-logger = logging.getLogger('retroAlbum')
+logger = logging.getLogger('fotos')
 
 
 # Flask app setup
 app = Flask(__name__)
-wsgi_app = app.wsgi_app
 app.secret_key = config["flaskSecret"]
 
 # OAuth2 client setup
@@ -141,7 +140,7 @@ def handle_exception(e):
 
 @app.route("/")
 def index():
-    return 'album'
+    return render_template("index.html")
 
 @app.route("/parse")
 def parse():
@@ -195,7 +194,7 @@ def album(album):
             if photo['thumb_height'] != config['thumbSizeSmall']:
                 style = style + 'height:%spx; ' % (int(photo['thumb_height']) + 6)
             photo['style'] = style
-        return render_template('index.html', data = result, config = config, user = user)
+        return render_template('album.html', data = result, config = config, user = user)
     else:
         raise Exception("Missing album %s" % album)
 
@@ -233,3 +232,6 @@ def _photo(album, photo, thumb = False):
 @app.route("/tag/<tag>")
 def tags(tag):
     return 'tag %s' % tag
+
+if __name__ == '__main__':
+    app.run()

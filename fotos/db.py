@@ -6,8 +6,9 @@ class Db:
         self.db_file = self.config["dbFile"] #"album.db"
         if not os.path.exists(self.db_file):
             self._conn = sqlite3.connect(self.db_file, detect_types=sqlite3.PARSE_DECLTYPES)
-            #with current_app.open_resource("schema.sql") as f:
-            with open("album.sql") as f:
+
+            sqlInitFile = os.path.join(os.path.dirname(os.path.realpath(__file__)), "album.sql")
+            with open(sqlInitFile) as f:
                 self._conn.executescript(f.read())
             self._conn.close()
 
