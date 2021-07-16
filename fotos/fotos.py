@@ -25,8 +25,8 @@ app.secret_key = config["flaskSecret"]
 # OAuth2 client setup
 client = WebApplicationClient(config['googleOauth']['clientId'])
 
-parser = AlbumParser(config)
-db = Db(config)
+parser = AlbumParser(config, logger)
+db = Db(config, logger)
 
 def login(initial_url):
     # Find out what URL to hit for Google login
@@ -147,9 +147,9 @@ def parse():
     """
     parse a folder to create an album
     """
-    user, redirect = authenticate()
+    user, redirect_response = authenticate()
     if not user:
-        return redirect
+        return redirect_response
     user_tags = user['tags']
 
     if not 'admin' in user_tags:
@@ -166,9 +166,9 @@ def import_album():
     """
     import a generated album from it's json file
     """
-    user, redirect = authenticate()
+    user, redirect_response = authenticate()
     if not user:
-        return redirect
+        return redirect_response
     user_tags = user['tags']
 
     if not 'admin' in user_tags:
@@ -176,13 +176,15 @@ def import_album():
     path = request.args.get('path', None)
     album = parser.import_album(path)
     db.create_album(album, True)
-    return redirect(url_for('album', album = album['name']))
+    redirect_url = url_for('album', album = album['name'])
+    logger.info("Redirecting to: %s" % redirect_url)
+    return redirect(redirect_url)
 
 @app.route("/<album>")
 def album(album):
-    user, redirect = authenticate()
+    user, redirect_response = authenticate()
     if not user:
-        return redirect
+        return redirect_response
     user_tags = user['tags']
 
     result = db.search_photos(album, user_tags)
@@ -217,9 +219,9 @@ def favicon():
     return send_from_directory(os.path.join(app.root_path, 'static'), 'favicon.ico', mimetype='image/vnd.microsoft.icon')
 
 def _photo(album, photo, thumb = False):
-    user, redirect = authenticate()
+    user, redirect_response = authenticate()
     if not user:
-        return redirect
+        return redirect_response
     user_tags = user['tags']
 
     result = db.search_photo(album, photo, user_tags)

@@ -1,8 +1,9 @@
 import sqlite3, os
 
 class Db:
-    def __init__(self, config) -> None:
+    def __init__(self, config, logger) -> None:
         self.config = config
+        self.logger = logger
         self.db_file = self.config["dbFile"] #"album.db"
         if not os.path.exists(self.db_file):
             self._conn = sqlite3.connect(self.db_file, detect_types=sqlite3.PARSE_DECLTYPES)

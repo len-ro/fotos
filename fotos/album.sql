@@ -30,4 +30,4 @@ create table photo (
 create table user (
     id TEXT PRIMARY KEY,
     tags TEXT
-);
+);s

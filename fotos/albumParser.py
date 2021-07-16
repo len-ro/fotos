@@ -3,8 +3,9 @@ import pyexiv2, datetime, json
 from PIL import Image, ImageOps
 
 class AlbumParser:
-    def __init__(self, config) -> None:
+    def __init__(self, config, logger) -> None:
         self.config = config
+        self.logger = logger
         self.skipDirs = [self.config["albumDir"], self.config["thumbDir"], 'js', 'css', 'default-skin', 'img']
 
     def import_album(self, path):
@@ -17,11 +18,14 @@ class AlbumParser:
                 #parsed in a different place, just load in the db
                 albumDataFile = os.path.join(fullPath, self.config["albumDataFile"])
                 if os.path.exists(albumDataFile) and os.path.isfile(albumDataFile):
+                    self.logger.info("Loading %s" % albumDataFile)
                     with open(albumDataFile) as json_file:
                         album = json.load(json_file)
+                        album['base_path'] = basePath
                         return album
                 else:
                     raise Exception("Missing %s" % albumDataFile)
+        raise Exception("Cannot find album %s in %s" % (path, self.config['paths'].join(',')))
 
     def parse(self, path, force):
         for basePath in self.config["paths"]:
