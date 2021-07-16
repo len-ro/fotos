@@ -50,7 +50,7 @@ class Db:
         for table in tables:
             for rtag in restrict_tags:
                 restrict_sql = restrict_sql + "and " + table + ".tags not like '%" + rtag + "%' "
-        #print(restrict_tags, " -> ", restrict_sql)
+        self.logger.info("%s %s -> %s" % (str(security_tags), str(restrict_tags), restrict_sql))
         return restrict_sql
 
 
@@ -62,7 +62,6 @@ class Db:
         try:
             conn = sqlite3.connect(self.db_file, detect_types=sqlite3.PARSE_DECLTYPES)
             cursor = conn.cursor()
-
             
             if album:
                 cursor.execute("select album.base_path, album.path, photo.file from photo, album " 
@@ -86,7 +85,6 @@ class Db:
         try:
             conn = sqlite3.connect(self.db_file, detect_types=sqlite3.PARSE_DECLTYPES)
             cursor = conn.cursor()
-
 
             if album:
                 cursor.execute("select * from album where (name like :name or alias like :name)" + self._restrict_sql(['album'], security_tags), {'name': '%' + album + '%'})

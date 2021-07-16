@@ -19,7 +19,7 @@
 {% endfor %}
 
 {% for photo in data['photos'] %}
-<a class="swipebox grid-item" style="{{ photo.style }}" href="{{ url_for('photo', album = album.name, photo = photo.file) }}"><img src="{{ album.name }}/thumbs/{{ photo.file }}" class="thumb"/></a>
+<a class="swipebox grid-item" style="{{ photo.style }}" href="{{ url_for('photo', album = album.name, photo = photo.file) }}"><img src="{{ album.name }}/thumbs/{{ photo.file }}" class="thumb" alt="{{ photo.tags }}"/></a>
 {% endfor %}
 </div>
 <script>

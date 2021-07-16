@@ -33,6 +33,8 @@ def login(initial_url):
     google_provider_cfg = get_google_provider_cfg()
     authorization_endpoint = google_provider_cfg["authorization_endpoint"]
 
+    logger.info("Initial_url %s" % (initial_url))
+
     # Use library to construct the request for login and provide
     # scopes that let you retrieve user's profile from Google
     request_uri = client.prepare_request_uri(
@@ -92,13 +94,13 @@ def callback():
     user = db.get_user(users_email)
 
     if not user:
-        raise Exception("Missing user %s" % id) 
+        raise Exception("Missing user %s" % users_email) 
     else:
         logger.info("Login user: %s %s" % user)
 
     # Begin user session by logging the user in
     session.permanent = False #https://stackoverflow.com/questions/37227780/flask-session-persisting-after-close-browser
-    session['user'] = {'email': users_email, 'tags': user[1], 'name': users_name, 'picture': picture } 
+    session['user'] = {'email': users_email, 'tags': user[1].split(','), 'name': users_name, 'picture': picture } 
 
     # Send user back to initial requested url
     return redirect(state)
@@ -114,11 +116,12 @@ def get_google_provider_cfg():
 def authenticate():
     if 'user' in session:
         current_user = session['user']
-        logger.info("%s is authenticated" % current_user)
+        logger.info("%s -> %s" % (current_user['email'], str(request)))
         return current_user, None
     else:
         logger.info("Not authenticated")
-        return None, login(request.full_path)
+        #https://stackoverflow.com/questions/15093593/request-path-and-url-for-dont-match-up-in-flask-under-mod-wsgi
+        return None, login(request.script_root + request.full_path)
 
 @app.after_request
 def add_header(r):
