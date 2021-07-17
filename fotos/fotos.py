@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 import json
-import os
+import os, argparse
 import logging, logging.config
 
 from db import Db
@@ -167,7 +167,7 @@ def parse():
 @app.route("/import")
 def import_album():
     """
-    import a generated album from it's json file
+    import a generated album from its json file
     """
     user, redirect_response = authenticate()
     if not user:
@@ -239,4 +239,28 @@ def tags(tag):
     return 'tag %s' % tag
 
 if __name__ == '__main__':
-    app.run()
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-a', '--action', required=True, choices=['import', 'parse', 'serve'], help='Action: import existing album.json | parse album | serve https://127.0.0.1:5000')   
+    parser.add_argument('-p', '--path', help='Album path')
+    parser.add_argument('-f', '--force', action="store_true", help='Force operation')
+    args = parser.parse_args()
+
+    action=args.action
+    album_path=args.path
+    force=args.force
+
+    if action != "server" and not album_path:
+        parser.error("-p path is required for import or parse")
+
+    if action == 'import':
+        album = parser.import_album(album_path)
+        db.create_album(album, True)
+        logger.info("Imported /%s" % album['name'])
+        print("Imported /%s" % album['name'])
+    if action == 'parse':
+        album = parser.parse(album_path, force)
+        db.create_album(album, force)
+        logger.info("Parsed /%s" % album['name'])
+        print("Parsed /%s" % album['name'])
+    if action == "server":
+        app.run(ssl_context="adhoc")

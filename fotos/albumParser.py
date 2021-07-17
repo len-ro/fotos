@@ -16,7 +16,7 @@ class AlbumParser:
                 fullPath = os.path.join(basePath, path)
 
                 #parsed in a different place, just load in the db
-                albumDataFile = os.path.join(fullPath, self.config["albumDataFile"])
+                albumDataFile = os.path.join(fullPath, self.config["albumDir"], self.config["albumDataFile"])
                 if os.path.exists(albumDataFile) and os.path.isfile(albumDataFile):
                     self.logger.info("Loading %s" % albumDataFile)
                     with open(albumDataFile) as json_file:
@@ -39,10 +39,15 @@ class AlbumParser:
         fullPath = os.path.join(basePath, path)
 
         #load album tags from file
-        albumDataFile = os.path.join(fullPath, self.config["albumDataFile"])
+        albumDataFile = os.path.join(fullPath, self.config["albumDir"], self.config["albumDataFile"])
+        album = None
         if os.path.exists(albumDataFile) and os.path.isfile(albumDataFile):
             with open(albumDataFile) as json_file:
                 album = json.load(json_file)
+
+        tags = None
+        if album:
+            tags = album['tags']
 
         album = { 
             "name": os.path.basename(fullPath),
@@ -50,7 +55,7 @@ class AlbumParser:
             "path": path,
             "photos": [],
             "folders": [],
-            "tags": album['tags'] or []
+            "tags": tags or []
         }
 
         albumFolder = os.path.join(fullPath, self.config["albumDir"])

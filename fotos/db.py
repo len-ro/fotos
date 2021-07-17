@@ -50,7 +50,7 @@ class Db:
         for table in tables:
             for rtag in restrict_tags:
                 restrict_sql = restrict_sql + "and " + table + ".tags not like '%" + rtag + "%' "
-        self.logger.info("%s %s -> %s" % (str(security_tags), str(restrict_tags), restrict_sql))
+        #self.logger.info("%s %s -> %s" % (str(security_tags), str(restrict_tags), restrict_sql))
         return restrict_sql
 
 
