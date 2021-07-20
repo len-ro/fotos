@@ -39,3 +39,9 @@ Assuming app install path is /home/fotos/fotos the following VirtualHost config 
         Require all granted
     </Directory>
 ```
+
+# Workflow
+
+https://askubuntu.com/questions/343502/how-to-rsync-to-android
+
+rsync --verbose --delete -P --omit-dir-times --no-perms -r --inplace --size-only --ignore-existing 20200000-onahill/ /phantom/poze/2020/20200000-onahill

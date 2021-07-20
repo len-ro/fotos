@@ -113,10 +113,16 @@ def logout():
 def get_google_provider_cfg():
     return requests.get(config['googleOauth']['discoveryURL']).json()
 
+def get_remote_ip(request):
+    if 'X-Forwarded-For' in request.headers:
+        return request.headers['X-Forwarded-For']
+    else:
+        return request.remote_addr
+
 def authenticate():
     if 'user' in session:
         current_user = session['user']
-        logger.info("%s -> %s" % (current_user['email'], str(request)))
+        logger.info("%s - %s %s %s" % (get_remote_ip(request), current_user['email'], request.method, request.url))
         return current_user, None
     else:
         logger.info("Not authenticated")
@@ -239,28 +245,26 @@ def tags(tag):
     return 'tag %s' % tag
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser()
-    parser.add_argument('-a', '--action', required=True, choices=['import', 'parse', 'serve'], help='Action: import existing album.json | parse album | serve https://127.0.0.1:5000')   
-    parser.add_argument('-p', '--path', help='Album path')
-    parser.add_argument('-f', '--force', action="store_true", help='Force operation')
-    args = parser.parse_args()
+    argparser = argparse.ArgumentParser()
+    argparser.add_argument('-a', '--action', required=True, choices=['import', 'parse', 'serve'], help='Action: import existing album.json | parse album | serve https://127.0.0.1:5000')   
+    argparser.add_argument('-p', '--path', help='Album path')
+    argparser.add_argument('-f', '--force', action="store_true", help='Force operation')
+    args = argparser.parse_args()
 
     action=args.action
     album_path=args.path
     force=args.force
 
     if action != "server" and not album_path:
-        parser.error("-p path is required for import or parse")
+        argparser.error("-p path is required for import or parse")
 
     if action == 'import':
         album = parser.import_album(album_path)
         db.create_album(album, True)
         logger.info("Imported /%s" % album['name'])
-        print("Imported /%s" % album['name'])
     if action == 'parse':
         album = parser.parse(album_path, force)
         db.create_album(album, force)
         logger.info("Parsed /%s" % album['name'])
-        print("Parsed /%s" % album['name'])
     if action == "server":
         app.run(ssl_context="adhoc")

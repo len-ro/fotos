@@ -27,21 +27,23 @@ class AlbumParser:
                     raise Exception("Missing %s" % albumDataFile)
         raise Exception("Cannot find album %s in %s" % (path, self.config['paths'].join(',')))
 
-    def parse(self, path, force):
+    def parse(self, path, deleteExisting):
         for basePath in self.config["paths"]:
             testPath = os.path.join(basePath, path)
             if os.path.exists(testPath):
                 #find only the first matching path
-                return self.parse_album_folder(basePath, path, force)
+                return self.parse_album_folder(basePath, path, deleteExisting)
 
-    def parse_album_folder(self, basePath, path, force):
+    def parse_album_folder(self, basePath, path, deleteExisting):
         """ parses an album folder which might contain sub folders """
         fullPath = os.path.join(basePath, path)
 
         #load album tags from file
         albumDataFile = os.path.join(fullPath, self.config["albumDir"], self.config["albumDataFile"])
         album = None
+        thisIsAFotosAlbum = False
         if os.path.exists(albumDataFile) and os.path.isfile(albumDataFile):
+            thisIsAFotosAlbum = True
             with open(albumDataFile) as json_file:
                 album = json.load(json_file)
 
@@ -60,19 +62,20 @@ class AlbumParser:
 
         albumFolder = os.path.join(fullPath, self.config["albumDir"])
         hasAlbum = os.path.exists(albumFolder) #check if there is an album folder already
-        if force and hasAlbum: #if force, remove existing album to regenerate
+        if deleteExisting and hasAlbum and thisIsAFotosAlbum: 
+            #if deleteExisting, remove existing album to regenerate but only if this is a fotos album, don't delete old album, they might contain usefull info
             shutil.rmtree(albumFolder)
             hasAlbum = False
         for f in os.listdir(fullPath):
             filePath = os.path.join(fullPath, f)
             if os.path.isdir(filePath) and f not in self.skipDirs:
                 #handle subfolders
-                album['folders'].append(self.parse_album_folder(basePath, os.path.join(path, f), force))
+                album['folders'].append(self.parse_album_folder(basePath, os.path.join(path, f), deleteExisting))
             else:
                 #handle photos
                 refFile = f.upper()
                 if refFile.endswith(tuple(self.config["formats"])):
-                    image = self.parse_image(fullPath, f, hasAlbum)
+                    image = self.parse_image(fullPath, f, hasAlbum, not thisIsAFotosAlbum)
                     album['photos'].append(image)
 
         #save parsed album to a file
@@ -81,7 +84,11 @@ class AlbumParser:
 
         return album
 
-    def parse_image(self, root, file, hasAlbum = False):
+    def parse_image(self, root, file, hasAlbum, regeneratePhotos):
+        """
+        :param bool hasAlbum: there is an album folder already, don't regenerate photos
+        :param bool regeneratePhotos: unless this is true
+        """
         imgPath = os.path.join(root, file)
         albumImgPath = os.path.join(root, self.config["albumDir"], file)
         thumbImgPath = os.path.join(root, self.config["albumDir"], self.config["thumbDir"], file)
@@ -137,7 +144,8 @@ class AlbumParser:
         imgSize = im.size
         im.close()
 
-        if not hasAlbum and (rating >= 1 or favorite):
+        if (not hasAlbum or regeneratePhotos) and (rating >= 1 or favorite):
+            self.logger.info("Generate photo and thumb for %s" % file)
             #generate the album if not already generated and if image is selected
 
             #clean metadata
