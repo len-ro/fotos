@@ -96,15 +96,19 @@ class Db:
                     album = self.rows2map(albums, cursor)[0]
                     album_id = album['id']
                     album_sql = album['custom_sql'] 
-                    #should return a list of photos ie. select * from photo where album_id = :album_id or
-                    #select * from photo where tags like '%ak%' and rating >= 2
+                    result = {'album': album}
+                    #should be the first where clause: ie "photo.tags like '%ak%' and photo.rating >= 2" in:
+                    #select photo.*, album.name from photo, album where photo.tags like '%ak%' and photo.rating >= 2
+                    
+                    sql_prefix = "select photo.*, album.name as album_name from photo, album where "
+                    sql_suffix = " and photo.album_id = album.id and (photo.rating >= 1 or photo.favorite == 1) " + self._restrict_sql(['photo'], security_tags) + " order by photo.file"
                     if album_sql == None:                
                         cursor.execute("select * from album where parent_id = :album_id", {'album_id': album_id})
-                        result = {'album': album, 'folders': self.rows2map(cursor.fetchall(), cursor)}
-                        cursor.execute("select * from photo where album_id = :album_id and (rating >= 1 or favorite == 1) " + self._restrict_sql(['photo'], security_tags) + " order by file", {'album_id': album_id})
+                        result['folders'] = self.rows2map(cursor.fetchall(), cursor)
+                        cursor.execute(sql_prefix + "photo.album_id = :album_id" + sql_suffix, {'album_id': album_id})
                     else:
-                        sql = album_sql + " and (rating >= 1 or favorite == 1) " + self._restrict_sql(['photo'], security_tags) + " order by file"
-                        cursor.execute(sql)
+                        result['folders'] = []
+                        cursor.execute(sql_prefix + album_sql + sql_suffix)
                     result['photos'] = self.rows2map(cursor.fetchall(), cursor)
                     return result
                 else:
