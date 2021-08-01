@@ -95,9 +95,16 @@ class Db:
                     #return photos
                     album = self.rows2map(albums, cursor)[0]
                     album_id = album['id']
-                    cursor.execute("select * from album where parent_id = :album_id", {'album_id': album_id})
-                    result = {'album': album, 'folders': self.rows2map(cursor.fetchall(), cursor)}
-                    cursor.execute("select * from photo where album_id = :album_id and (rating >= 1 or favorite == 1) " + self._restrict_sql(['photo'], security_tags) + " order by file", {'album_id': album_id})
+                    album_sql = album['custom_sql'] 
+                    #should return a list of photos ie. select * from photo where album_id = :album_id or
+                    #select * from photo where tags like '%ak%' and rating >= 2
+                    if album_sql == None:                
+                        cursor.execute("select * from album where parent_id = :album_id", {'album_id': album_id})
+                        result = {'album': album, 'folders': self.rows2map(cursor.fetchall(), cursor)}
+                        cursor.execute("select * from photo where album_id = :album_id and (rating >= 1 or favorite == 1) " + self._restrict_sql(['photo'], security_tags) + " order by file", {'album_id': album_id})
+                    else:
+                        sql = album_sql + " and (rating >= 1 or favorite == 1) " + self._restrict_sql(['photo'], security_tags) + " order by file"
+                        cursor.execute(sql)
                     result['photos'] = self.rows2map(cursor.fetchall(), cursor)
                     return result
                 else:

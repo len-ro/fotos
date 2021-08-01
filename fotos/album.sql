@@ -6,6 +6,7 @@ create table album (
     path TEXT,
     base_path TEXT,
     tags TEXT,
+    custom_sql TEXT,
     FOREIGN KEY (parent_id) REFERENCES album (id) 
 );
 
