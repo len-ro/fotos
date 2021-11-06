@@ -167,7 +167,7 @@ def parse():
     force = request.args.get('force', 'false')
     force = (force == 'true')
     album = parser.parse(path, force)
-    db.create_album(album, force)
+    db.create_album(album)
     return redirect(url_for('album', album = album['name']))
 
 @app.route("/import")
@@ -184,7 +184,7 @@ def import_album():
         raise Exception("Admin required for import operation")
     path = request.args.get('path', None)
     album = parser.import_album(path)
-    db.create_album(album, True)
+    db.create_album(album)
     redirect_url = url_for('album', album = album['name'])
     logger.info("Redirecting to: %s" % redirect_url)
     return redirect(redirect_url)
@@ -195,6 +195,15 @@ def album(album):
     if not user:
         return redirect_response
     user_tags = user['tags']
+
+    tags = request.args.get('tags', None)
+    if tags != None:
+        if tags == "":
+            tags = []
+        else:
+            tags = tags.split(",")
+        user_tags = list(set(tags) & set(user_tags))
+    logger.info("user_tags: %s" % ','.join(user_tags))
 
     result = db.search_photos(album, user_tags)
     if result:
@@ -253,6 +262,8 @@ if __name__ == '__main__':
 
     action=args.action
     album_path=args.path
+    if album_path.endswith('/'):
+        album_path = album_path[:-1]
     force=args.force
 
     if action != "server" and not album_path:
@@ -260,11 +271,12 @@ if __name__ == '__main__':
 
     if action == 'import':
         album = parser.import_album(album_path)
-        db.create_album(album, True)
+        db.create_album(album)
         logger.info("Imported /%s" % album['name'])
     if action == 'parse':
+        print(album_path)
         album = parser.parse(album_path, force)
-        db.create_album(album, force)
+        db.create_album(album)
         logger.info("Parsed /%s" % album['name'])
     if action == "server":
         app.run(ssl_context="adhoc")

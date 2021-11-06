@@ -34,7 +34,7 @@ class AlbumParser:
                 #find only the first matching path
                 return self.parse_album_folder(basePath, path, deleteExisting)
 
-    def parse_album_folder(self, basePath, path, deleteExisting):
+    def parse_album_folder(self, basePath, path, deleteExisting, parent = None):
         """ parses an album folder which might contain sub folders """
         fullPath = os.path.join(basePath, path)
 
@@ -51,8 +51,12 @@ class AlbumParser:
         if album:
             tags = album['tags']
 
+        album_name = os.path.basename(fullPath)
+        if parent:
+            album_name = f'{parent}__{album_name}'
+
         album = { 
-            "name": os.path.basename(fullPath),
+            "name": album_name,
             "base_path": basePath,
             "path": path,
             "photos": [],
@@ -66,16 +70,19 @@ class AlbumParser:
             #if deleteExisting, remove existing album to regenerate but only if this is a fotos album, don't delete old album, they might contain usefull info
             shutil.rmtree(albumFolder)
             hasAlbum = False
+
+        if not os.path.exists(albumFolder):
+            os.makedirs(albumFolder)
         for f in os.listdir(fullPath):
             filePath = os.path.join(fullPath, f)
             if os.path.isdir(filePath) and f not in self.skipDirs:
                 #handle subfolders
-                album['folders'].append(self.parse_album_folder(basePath, os.path.join(path, f), deleteExisting))
+                album['folders'].append(self.parse_album_folder(basePath, os.path.join(path, f), deleteExisting, album_name))
             else:
                 #handle photos
                 refFile = f.upper()
                 if refFile.endswith(tuple(self.config["formats"])):
-                    image = self.parse_image(fullPath, f, hasAlbum, not thisIsAFotosAlbum)
+                    image = self.parse_image(fullPath, f, hasAlbum)
                     album['photos'].append(image)
 
         #save parsed album to a file
@@ -84,23 +91,30 @@ class AlbumParser:
 
         return album
 
-    def parse_image(self, root, file, hasAlbum, regeneratePhotos):
+    def parse_image(self, root, file, hasAlbum):
         """
         :param bool hasAlbum: there is an album folder already, don't regenerate photos
-        :param bool regeneratePhotos: unless this is true
         """
         imgPath = os.path.join(root, file)
+        imgPathRelForSymlink = os.path.join("..", file) 
         albumImgPath = os.path.join(root, self.config["albumDir"], file)
+        albumImgPath = albumImgPath.replace(".JPG", ".jpg")
         thumbImgPath = os.path.join(root, self.config["albumDir"], self.config["thumbDir"], file)
+        thumbImgPath = thumbImgPath.replace(".JPG", ".jpg")
 
-        #log('Processing %s to %s and %s' % (imgPath, albumImgPath, thumbImgPath))
+        #self.logger.info('Processing %s to %s and %s' % (imgPath, albumImgPath, thumbImgPath))
 
-        metadata = pyexiv2.metadata.ImageMetadata(imgPath)
+        if os.path.exists(albumImgPath):
+            metadata = pyexiv2.metadata.ImageMetadata(albumImgPath)
+        else:
+            metadata = pyexiv2.metadata.ImageMetadata(imgPath)
         metadata.read()
         
         caption = self.get_exif_tag(metadata, self.config["exif"]["captionKeys"])
         if caption:
-            caption = 'data-title="%s"' % caption.value
+            caption = caption.value.strip()
+            if len(caption) > 0:
+                caption = 'data-title="%s"' % caption.value
         else:
             caption = ''
 
@@ -120,7 +134,6 @@ class AlbumParser:
             tags = tags.value
 
         rating = self.get_exif_tag(metadata, self.config["exif"]["ratingKeys"])
-
         if os.path.exists(albumImgPath):
             #the album was already generated, update rating for selected album photos to at least 1
             if rating:
@@ -139,13 +152,15 @@ class AlbumParser:
         else:
             rating = 0
 
+        #self.logger.info(f"Rating {file} -> {rating}")
+
         thumbSize = (0, 0)
         im = Image.open(imgPath)
         imgSize = im.size
         im.close()
 
-        if (not hasAlbum or regeneratePhotos) and (rating >= 1 or favorite):
-            self.logger.info("Generate photo and thumb for %s" % file)
+        if rating >= 1 or favorite:
+            self.logger.info("Ensure photo and thumb for %s" % file)
             #generate the album if not already generated and if image is selected
 
             #clean metadata
@@ -158,13 +173,16 @@ class AlbumParser:
                 size = self.config["thumbSizeSmall"]
             thumbSize = self.scale_image(imgPath, thumbImgPath, size, metadata)
 
-            #create base image
-            size = self.config["imageSize"]
-            if imgSize[0] >= size or imgSize[1] >= size:
-                imgSize = self.scale_image(imgPath, albumImgPath, size, metadata)
-            else:
-                #image is small, no resize needed, create symlink
-                os.symlink(imgPath, albumImgPath)        
+            #create album image
+            if not os.path.exists(albumImgPath):
+                size = self.config["imageSize"]
+                if imgSize[0] >= size or imgSize[1] >= size:
+                    imgSize = self.scale_image(imgPath, albumImgPath, size, metadata)
+                else:
+                    #image is small, no resize needed, create symlink
+                    if(os.path.exists(albumImgPath)):
+                        os.remove(albumImgPath)
+                    os.symlink(imgPathRelForSymlink, albumImgPath) #symlink must be relative otherwise will get destroyed by rsync   
 
         return {'date_time': dateTime, 'file': file, 'caption': caption, 
             'width': imgSize[0], 'height': imgSize[1], 

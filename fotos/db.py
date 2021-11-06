@@ -13,21 +13,26 @@ class Db:
                 self._conn.executescript(f.read())
             self._conn.close()
 
-    def create_album(self, album, force, parent_id = None):
+    def create_album(self, album, parent_id = None):
         try:
             conn = sqlite3.connect(self.db_file, detect_types=sqlite3.PARSE_DECLTYPES)
             cursor = conn.cursor()
-            self._create_album(cursor, album, force, parent_id)
+            return self._create_album(cursor, album, parent_id)
         finally:
             conn.commit()
             cursor.close()
             conn.close()
 
-    def _create_album(self, cursor, album, force, parent_id):
-        if force:
-            cursor.execute("delete from album where name = :name and path = :path and base_path = :base_path", album)
+    def _create_album(self, cursor, album, parent_id):
+        self.logger.info(f"Importing {album['name']} {album['base_path']}/{album['path']}")
+        cursor.execute("delete from album where name = :name and path = :path and base_path = :base_path", album)
+
+        #delete rogue photos
+        cursor.execute("delete from photo where album_id not in (select id from album)")
+        
         album['tags'] = ','.join(album['tags'])
         album['parent_id'] = parent_id
+        
         cursor.execute("insert into album(name, path, base_path, tags, parent_id) values (:name, :path, :base_path, :tags, :parent_id)", album)
         album_id = cursor.lastrowid
         for photo in album['photos']:
@@ -37,7 +42,8 @@ class Db:
             + "(:album_id, :file, :width, :height, :thumb_width, :thumb_height, :caption, :tags, :rating, :favorite, :date_time)", photo)
         
         for folder in album['folders']:
-            self._create_album(cursor, folder, force, album_id)
+            folder['base_path'] = album['base_path']
+            self._create_album(cursor, folder, album_id)
         return album_id
 
     def _restrict_sql(self, tables, security_tags = []):
@@ -87,7 +93,7 @@ class Db:
             cursor = conn.cursor()
 
             if album:
-                cursor.execute("select * from album where (name like :name or alias like :name)" + self._restrict_sql(['album'], security_tags), {'name': '%' + album + '%'})
+                cursor.execute("select * from album where (name = :name or alias = :name)" + self._restrict_sql(['album'], security_tags), {'name': album})
                 albums = cursor.fetchall()
                 if len(albums) == 0:
                     return None
@@ -101,7 +107,7 @@ class Db:
                     #select photo.*, album.name from photo, album where photo.tags like '%ak%' and photo.rating >= 2
                     
                     sql_prefix = "select photo.*, album.name as album_name from photo, album where "
-                    sql_suffix = " and photo.album_id = album.id and (photo.rating >= 1 or photo.favorite == 1) " + self._restrict_sql(['photo'], security_tags) + " order by photo.file"
+                    sql_suffix = " and photo.album_id = album.id and (photo.rating >= 1 or photo.favorite == 1) " + self._restrict_sql(['photo'], security_tags) + " order by photo.file asc"
                     if album_sql == None:                
                         cursor.execute("select * from album where parent_id = :album_id", {'album_id': album_id})
                         result['folders'] = self.rows2map(cursor.fetchall(), cursor)
