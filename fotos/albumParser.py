@@ -25,7 +25,7 @@ class AlbumParser:
                         return album
                 else:
                     raise Exception("Missing %s" % albumDataFile)
-        raise Exception("Cannot find album %s in %s" % (path, self.config['paths'].join(',')))
+        raise Exception("Cannot find album %s in %s" % (path, ','.join(self.config['paths'])))
 
     def parse(self, path, deleteExisting):
         for basePath in self.config["paths"]:
@@ -33,6 +33,7 @@ class AlbumParser:
             if os.path.exists(testPath):
                 #find only the first matching path
                 return self.parse_album_folder(basePath, path, deleteExisting)
+        raise Exception("Cannot find album %s in %s" % (path, ','.join(self.config['paths'])))
 
     def parse_album_folder(self, basePath, path, deleteExisting, parent = None):
         """ parses an album folder which might contain sub folders """
@@ -114,7 +115,7 @@ class AlbumParser:
         if caption:
             caption = caption.value.strip()
             if len(caption) > 0:
-                caption = 'data-title="%s"' % caption.value
+                caption = 'data-title="%s"' % caption
         else:
             caption = ''
 
@@ -145,6 +146,7 @@ class AlbumParser:
                 tag_name = self.config["exif"]["ratingKeys"][0]
                 metadata[tag_name] = pyexiv2.XmpTag(tag_name, 1)
                 metadata.write()
+            self.sync_back_metadata(metadata, imgPath)
 
         rating = self.get_exif_tag(metadata, self.config["exif"]["ratingKeys"])
         if rating:
@@ -205,6 +207,41 @@ class AlbumParser:
         for k in all_keys:
             if k not in keep_keys:
                 del metadata[k]
+
+    def sync_back_metadata(self, metadata, imgPath):
+        """When importing from an existing album, sync some metadata back to the original file
+
+        Args:
+            metadata: from the album file
+            imgPath: the original file
+        """
+        orig_metadata = pyexiv2.metadata.ImageMetadata(imgPath)
+        orig_metadata.read()
+        for k in self.config['exif']['ratingKeys']:
+            m = self.get_exif_tag(metadata, [k])
+            om = self.get_exif_tag(orig_metadata, [k])
+            if m:
+                new_tag = pyexiv2.XmpTag(k, m.value)
+                orig_metadata[k] = new_tag
+
+        #merge subject tags
+        for k in ['Xmp.dc.subject']:
+            tags = []
+            m = self.get_exif_tag(metadata, [k])
+            om = self.get_exif_tag(orig_metadata, [k])
+            if m:
+                tags.extend(m.value)
+            if om:
+                otags = om.value
+                for t in otags:
+                    if t not in tags:
+                        tags.append(t)
+            if len(tags) > 0:
+                metadata[k] = pyexiv2.XmpTag(k, tags)
+                orig_metadata[k] = pyexiv2.XmpTag(k, tags)
+
+        orig_metadata.write()
+        metadata.write()
 
     def scale_image(self, imgPath, scaledImgPath, size, metadata):
         dirName = os.path.dirname(scaledImgPath)

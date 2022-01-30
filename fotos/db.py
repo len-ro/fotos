@@ -107,7 +107,7 @@ class Db:
                     #select photo.*, album.name from photo, album where photo.tags like '%ak%' and photo.rating >= 2
                     
                     sql_prefix = "select photo.*, album.name as album_name from photo, album where "
-                    sql_suffix = " and photo.album_id = album.id and (photo.rating >= 1 or photo.favorite == 1) " + self._restrict_sql(['photo'], security_tags) + " order by photo.file asc"
+                    sql_suffix = " and photo.album_id = album.id and (photo.rating >= 1 or photo.favorite == 1) " + self._restrict_sql(['photo'], security_tags) + " order by date(photo.date_time) asc"
                     if album_sql == None:                
                         cursor.execute("select * from album where parent_id = :album_id", {'album_id': album_id})
                         result['folders'] = self.rows2map(cursor.fetchall(), cursor)
@@ -124,6 +124,25 @@ class Db:
             cursor.close()
             conn.close()
         
+    def list_albums(self):
+        """
+        returns a list of albums
+        """
+        try:
+            conn = sqlite3.connect(self.db_file, detect_types=sqlite3.PARSE_DECLTYPES)
+            cursor = conn.cursor()
+            
+            cursor.execute("select name, path, tags from album where parent_id is null order by name")
+            p = cursor.fetchall()
+            if p == None: #error
+                return None
+            else:
+                return {'folders': self.rows2map(p, cursor), 'album': {'name': 'list'}}
+        finally:
+            conn.commit()
+            cursor.close()
+            conn.close()
+
 
     def rows2map(self, rows, cursor):
         names = [description[0] for description in cursor.description]

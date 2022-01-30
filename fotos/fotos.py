@@ -151,6 +151,25 @@ def handle_exception(e):
 def index():
     return render_template("index.html")
 
+@app.route("/list")
+def list_albums():
+    """
+    parse a folder to create an album
+    """
+    user, redirect_response = authenticate()
+    if not user:
+        return redirect_response
+    user_tags = user['tags']
+
+    if not 'admin' in user_tags:
+        raise Exception("Admin required for list operation")
+
+    result = db.list_albums()
+    if result:
+        return render_template('album.html', data = result, user = user)
+    else:
+        raise Exception("No album found")
+
 @app.route("/parse")
 def parse():
     """
